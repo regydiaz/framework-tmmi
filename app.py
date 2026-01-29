@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
-import numpy as np
+import re
 
 # Configuração da página
 st.set_page_config(
@@ -19,172 +19,393 @@ st.markdown("""
     .main-header {
         font-size: 2.5rem;
         font-weight: bold;
-        color: #1f77b4;
         text-align: center;
-        padding: 1rem;
-        background: linear-gradient(90deg, #e3f2fd 0%, #bbdefb 100%);
+        padding: 1.5rem;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         border-radius: 10px;
+        margin-bottom: 1rem;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .subtitle {
+        text-align: center;
+        color: #666;
+        font-size: 1.2rem;
         margin-bottom: 2rem;
+        font-weight: 500;
+    }
+    .hero-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin: 2rem 0;
+        text-align: center;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
     }
     .metric-card {
-        background-color: #f0f2f6;
+        background: white;
         padding: 1.5rem;
         border-radius: 10px;
-        border-left: 5px solid #1f77b4;
+        border: 2px solid #e0e0e0;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 0.5rem;
+    }
+    .metric-label {
+        font-size: 0.9rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
     .status-adotado {
         background-color: #d4edda;
         color: #155724;
-        padding: 0.3rem 0.6rem;
-        border-radius: 5px;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
         font-weight: bold;
+        font-size: 0.85rem;
+        display: inline-block;
     }
     .status-desenvolvendo {
         background-color: #fff3cd;
         color: #856404;
-        padding: 0.3rem 0.6rem;
-        border-radius: 5px;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
         font-weight: bold;
-    }
-    .status-planejado {
-        background-color: #d1ecf1;
-        color: #0c5460;
-        padding: 0.3rem 0.6rem;
-        border-radius: 5px;
-        font-weight: bold;
+        font-size: 0.85rem;
+        display: inline-block;
     }
     .status-em-adocao {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-weight: bold;
+        font-size: 0.85rem;
+        display: inline-block;
+    }
+    .status-nao-iniciado {
         background-color: #e2e3e5;
         color: #383d41;
-        padding: 0.3rem 0.6rem;
-        border-radius: 5px;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
         font-weight: bold;
+        font-size: 0.85rem;
+        display: inline-block;
+    }
+    .area-box {
+        background-color: #f8f9fa;
+        border-left: 5px solid #667eea;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 5px;
+    }
+    .nivel-header {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border-radius: 8px;
+        margin: 1.5rem 0 1rem 0;
+        font-size: 1.3rem;
+        font-weight: bold;
+    }
+    .diff-box {
+        background: #fff3cd;
+        border-left: 5px solid #ffc107;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 5px;
+    }
+    .match-box {
+        background: #d4edda;
+        border-left: 5px solid #28a745;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 5px;
     }
 </style>
 """, unsafe_allow_html=True)
 
+# Funções de cálculo
+def normalizar_area(area_raw):
+    """Normaliza nome da área de processo"""
+    if pd.isna(area_raw):
+        return None, None
+    
+    area = str(area_raw).strip()
+    
+    # Se tem múltiplos níveis, pega o maior
+    if '\n' in area:
+        linhas = [l.strip() for l in area.split('\n') if l.strip()]
+        niveis = []
+        for linha in linhas:
+            match = re.search(r'N(\d+)', linha)
+            if match:
+                niveis.append((int(match.group(1)), linha))
+        
+        if niveis:
+            area = max(niveis, key=lambda x: x[0])[1]
+    
+    # Extrair nível
+    nivel_match = re.search(r'N(\d+)', area)
+    nivel = f"Nível {nivel_match.group(1)}" if nivel_match else None
+    
+    # Normalizar nome
+    area_lower = area.lower()
+    
+    if 'política' in area_lower:
+        nome_area = "Política e Estratégia de Testes"
+    elif 'planejamento' in area_lower:
+        nome_area = "Planejamento de Testes"
+    elif 'monitoramento' in area_lower or 'controle' in area_lower:
+        nome_area = "Monitoramento e Controle dos Testes"
+    elif 'desenho' in area_lower or 'execução' in area_lower:
+        nome_area = "Desenho e Execução de Testes"
+    elif 'defeito' in area_lower or 'gerenciamento' in area_lower:
+        nome_area = "Gerenciamento de Defeitos"
+    elif 'ambiente' in area_lower:
+        nome_area = "Ambiente de Testes"
+    elif 'organização' in area_lower:
+        nome_area = "Organização de Testes"
+    elif 'treinamento' in area_lower:
+        nome_area = "Programa de Treinamento em Testes"
+    elif 'integração' in area_lower or 'sdlc' in area_lower:
+        nome_area = "Integração dos Testes ao SDLC"
+    elif 'não funcionais' in area_lower or 'nfr' in area_lower:
+        nome_area = "Testes Não Funcionais"
+    elif 'revisões' in area_lower or 'review' in area_lower or 'técnicas' in area_lower:
+        nome_area = "Revisões Técnicas (Quality Review)"
+    elif 'medição' in area_lower:
+        nome_area = "Medição dos Testes"
+    elif 'avaliação' in area_lower:
+        nome_area = "Avaliação da Qualidade do Produto"
+    elif 'prevenção' in area_lower:
+        nome_area = "Prevenção de Defeitos"
+    elif 'otimização' in area_lower:
+        nome_area = "Otimização do Processo de Testes"
+    elif 'controle da qualidade' in area_lower:
+        nome_area = "Controle da Qualidade"
+    elif 'avançadas' in area_lower:
+        nome_area = "Revisões Avançadas"
+    else:
+        nome_area = area.split('–')[1].strip() if '–' in area else area
+    
+    return nivel, nome_area
+
+def calcular_status(scores):
+    """Calcula status baseado em lista de scores"""
+    scores = [s for s in scores if pd.notna(s) and s > 0]
+    
+    if not scores:
+        return "Não Iniciado", 0, {}
+    
+    total = len(scores)
+    score_3 = sum(1 for s in scores if s >= 3)
+    score_2_mais = sum(1 for s in scores if s >= 2)
+    score_1_mais = sum(1 for s in scores if s >= 1)
+    
+    perc_3 = score_3 / total
+    perc_2 = score_2_mais / total
+    perc_1 = score_1_mais / total
+    
+    detalhes = {
+        'total': total,
+        'score_3': score_3,
+        'score_2_mais': score_2_mais,
+        'score_1_mais': score_1_mais,
+        'perc_3': perc_3,
+        'perc_2': perc_2,
+        'perc_1': perc_1,
+        'media': sum(scores) / total
+    }
+    
+    if perc_3 >= 0.8:
+        return "Adotado", perc_3, detalhes
+    elif perc_2 >= 0.5:
+        return "Em Adoção", perc_2, detalhes
+    elif perc_1 >= 0.3:
+        return "Desenvolvendo", perc_1, detalhes
+    else:
+        return "Não Iniciado", 0, detalhes
+
 # Carregar dados
 @st.cache_data
 def load_data():
-    file_path = '/mnt/user-data/uploads/Framework_-_TMMi-TAG.xlsx'
+    file_path = 'Framework_-_TMMi-TAG__1_.xlsx'
     
-    # Visão Institucional
-    df_institucional = pd.read_excel(file_path, sheet_name='TMMi - Visão Institucional', header=2)
-    df_institucional.columns = ['Nível TMMi', 'Área de Processo', 'Status Institucional', 'Observação', 'Extra']
-    df_institucional = df_institucional.dropna(subset=['Área de Processo'])
+    try:
+        # Visão Institucional (Manual)
+        df_inst = pd.read_excel(file_path, sheet_name='TMMi - Visão Institucional', skiprows=2)
+        df_inst.columns = ['Col0', 'Nível TMMi', 'Área de Processo', 'Status Institucional', 'Observação']
+        df_inst['Nível TMMi'] = df_inst['Nível TMMi'].ffill()
+        df_inst = df_inst[df_inst['Área de Processo'].notna()].drop('Col0', axis=1)
+        
+        # Score TMMi (para cálculo automático)
+        df_score = pd.read_excel(file_path, sheet_name='Score TMMi', skiprows=2)
+        df_score_clean = df_score[
+            (df_score['ID_MELHORIA'].notna()) & 
+            (df_score['ID_MELHORIA'] != 'ID_MELHORIA') &
+            (df_score['SCORE'].notna()) &
+            (pd.to_numeric(df_score['SCORE'], errors='coerce').notna())
+        ].copy()
+        df_score_clean['SCORE'] = pd.to_numeric(df_score_clean['SCORE'])
+        
+        # Normalizar áreas no Score
+        df_score_clean[['NIVEL', 'AREA_NOME']] = df_score_clean['NÍVEL E ÁREA DE PROCESSO'].apply(
+            lambda x: pd.Series(normalizar_area(x))
+        )
+        
+        # Calcular status automático por área
+        status_calculado = {}
+        for (nivel, area), group in df_score_clean.groupby(['NIVEL', 'AREA_NOME']):
+            if nivel and area:
+                scores = group['SCORE'].tolist()
+                status, perc, detalhes = calcular_status(scores)
+                status_calculado[f"{nivel}|{area}"] = {
+                    'nivel': nivel,
+                    'area': area,
+                    'status': status,
+                    'percentual': perc,
+                    'detalhes': detalhes
+                }
+        
+        # Roadmap
+        df_roadmap = pd.read_excel(file_path, sheet_name='ANUAL - Roadmap por Squads')
+        
+        # Visão Squads
+        df_squads = pd.read_excel(file_path, sheet_name='TMMi - Visão Squads', skiprows=3)
+        
+        return {
+            'institucional': df_inst,
+            'score': df_score_clean,
+            'status_calculado': status_calculado,
+            'roadmap': df_roadmap,
+            'squads': df_squads
+        }
+    except Exception as e:
+        st.error(f"Erro ao carregar dados: {e}")
+        return None
+
+def calcular_metricas(df):
+    total = len(df)
+    adotado = len(df[df['Status Institucional'] == 'Adotado'])
+    desenvolvendo = len(df[df['Status Institucional'] == 'Desenvolvendo'])
+    em_adocao = len(df[df['Status Institucional'] == 'Em Adoção'])
+    nao_iniciado = len(df[df['Status Institucional'] == 'Não Iniciado'])
     
-    # Visão Squads
-    df_squads = pd.read_excel(file_path, sheet_name='TMMi - Visão Squads', header=2)
-    
-    # Roadmap Trimestral
-    df_roadmap = pd.read_excel(file_path, sheet_name='Roadmap Trimestral', header=1)
-    
-    # Score TMMi
-    df_score = pd.read_excel(file_path, sheet_name='Score TMMi', header=2)
-    
-    # Mapa do TMMi
-    df_mapa = pd.read_excel(file_path, sheet_name='Mapa do TMMi', header=2)
-    
-    # Critérios TMMi
-    df_criterios = pd.read_excel(file_path, sheet_name='Critérios TMMi', header=0)
+    score = (adotado * 3 + em_adocao * 2 + desenvolvendo * 1.5) / total
+    score_5 = score / 3 * 5
     
     return {
-        'institucional': df_institucional,
-        'squads': df_squads,
-        'roadmap': df_roadmap,
-        'score': df_score,
-        'mapa': df_mapa,
-        'criterios': df_criterios
+        'total': total,
+        'adotado': adotado,
+        'desenvolvendo': desenvolvendo,
+        'em_adocao': em_adocao,
+        'nao_iniciado': nao_iniciado,
+        'score_3': score,
+        'score_5': score_5
     }
+
+def calcular_nivel_completo(df, nivel):
+    df_nivel = df[df['Nível TMMi'] == nivel]
+    if len(df_nivel) == 0:
+        return 0, 0, 0
+    total = len(df_nivel)
+    adotado = len(df_nivel[df_nivel['Status Institucional'] == 'Adotado'])
+    percentual = (adotado / total * 100) if total > 0 else 0
+    return adotado, total, percentual
 
 try:
     data = load_data()
     
+    if data is None:
+        st.stop()
+    
+    df_inst = data['institucional']
+    status_calc = data['status_calculado']
+    metricas = calcular_metricas(df_inst)
+    
     # Header
     st.markdown('<div class="main-header">🎯 Framework TMMi - TAG IMF</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle"><strong>De Subjetivo para Objetivo</strong> | <strong>De Percepção para Evidência</strong></div>', unsafe_allow_html=True)
     
-    # Sidebar para navegação
+    # Sidebar
     st.sidebar.title("📊 Navegação")
     pagina = st.sidebar.radio(
         "Escolha a visualização:",
         [
-            "🏠 Visão Geral",
-            "🏢 Visão Institucional", 
+            "🏠 Visão Executiva",
+            "📋 Áreas por Nível",
+            "🔍 Manual vs Automático",
             "👥 Visão por Squads",
-            "🗓️ Roadmap Trimestral",
-            "📈 Score TMMi",
-            "🗺️ Mapa do TMMi",
-            "📋 Critérios de Entrega"
+            "🗓️ Roadmap 2026",
+            "💡 Por que TMMi?"
         ]
     )
     
-    # Seção de exportação
-    st.sidebar.markdown("---")
-    st.sidebar.title("📥 Exportar")
-    st.sidebar.markdown("Gere relatórios para apresentação")
-    
-    col1, col2 = st.sidebar.columns(2)
-    
-    with col1:
-        if st.button("📄 PDF", use_container_width=True):
-            with st.spinner("Gerando PDF..."):
-                try:
-                    from exporter import TMMiExporter
-                    exporter = TMMiExporter(data)
-                    pdf_path = exporter.export_to_pdf()
-                    st.sidebar.success("✅ PDF gerado!")
-                    with open(pdf_path, 'rb') as f:
-                        st.sidebar.download_button(
-                            label="⬇️ Baixar PDF",
-                            data=f,
-                            file_name="Framework_TMMi_Relatorio.pdf",
-                            mime="application/pdf",
-                            use_container_width=True
-                        )
-                except Exception as e:
-                    st.sidebar.error(f"Erro: {str(e)}")
-    
-    with col2:
-        if st.button("📊 PPT", use_container_width=True):
-            with st.spinner("Gerando PowerPoint..."):
-                try:
-                    from exporter import TMMiExporter
-                    exporter = TMMiExporter(data)
-                    ppt_path = exporter.export_to_powerpoint()
-                    st.sidebar.success("✅ PPT gerado!")
-                    with open(ppt_path, 'rb') as f:
-                        st.sidebar.download_button(
-                            label="⬇️ Baixar PPT",
-                            data=f,
-                            file_name="Framework_TMMi_Apresentacao.pptx",
-                            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                            use_container_width=True
-                        )
-                except Exception as e:
-                    st.sidebar.error(f"Erro: {str(e)}")
-    
-    # ================== VISÃO GERAL ==================
-    if pagina == "🏠 Visão Geral":
-        st.header("📊 Dashboard Executivo")
+    # ================== VISÃO EXECUTIVA ==================
+    if pagina == "🏠 Visão Executiva":
         
-        # Métricas principais
+        nivel2_adotado, nivel2_total, nivel2_perc = calcular_nivel_completo(df_inst, 'Nível 2')
+        nivel3_adotado, nivel3_total, nivel3_perc = calcular_nivel_completo(df_inst, 'Nível 3')
+        
+        st.markdown(f"""
+        <div class="hero-box">
+            <h1 style="margin: 0; font-size: 2.5rem;">🎉 TAG IMF: NÍVEL 2 DO TMMi ALCANÇADO!</h1>
+            <p style="font-size: 1.3rem; margin: 1rem 0;">
+                <strong>{nivel2_perc:.0f}%</strong> das áreas do Nível 2 (Gerenciado) adotadas<br/>
+                Caminhando para Nível 3: <strong>{nivel3_perc:.0f}%</strong> já iniciado
+            </p>
+            <h2 style="font-size: 2rem; margin-top: 1rem;">Score: {metricas['score_5']:.1f}/5.0</h2>
+            <p style="font-size: 1.1rem;">✅ Saímos do improviso para o processo gerenciado!</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Métricas
         col1, col2, col3, col4 = st.columns(4)
         
-        # Calcular métricas
-        df_inst = data['institucional']
-        total_areas = len(df_inst)
-        adotado = len(df_inst[df_inst['Status Institucional'] == 'Adotado'])
-        desenvolvendo = len(df_inst[df_inst['Status Institucional'] == 'Desenvolvendo'])
-        em_adocao = len(df_inst[df_inst['Status Institucional'] == 'Em Adoção'])
-        
         with col1:
-            st.metric("Total de Áreas", total_areas, help="Total de áreas de processo TMMi mapeadas")
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{metricas['total']}</div>
+                <div class="metric-label">Áreas Mapeadas</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
         with col2:
-            st.metric("Adotado", adotado, delta=f"{(adotado/total_areas*100):.0f}%", help="Áreas totalmente adotadas")
+            st.markdown(f"""
+            <div class="metric-card" style="border-color: #28a745;">
+                <div class="metric-value" style="color: #28a745;">{metricas['adotado']}</div>
+                <div class="metric-label">Adotado ({metricas['adotado']/metricas['total']*100:.0f}%)</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
         with col3:
-            st.metric("Desenvolvendo", desenvolvendo, delta=f"{(desenvolvendo/total_areas*100):.0f}%", help="Áreas em desenvolvimento")
+            st.markdown(f"""
+            <div class="metric-card" style="border-color: #17a2b8;">
+                <div class="metric-value" style="color: #17a2b8;">{metricas['em_adocao']}</div>
+                <div class="metric-label">Em Adoção ({metricas['em_adocao']/metricas['total']*100:.0f}%)</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
         with col4:
-            st.metric("Em Adoção", em_adocao, delta=f"{(em_adocao/total_areas*100):.0f}%", help="Áreas em processo de adoção")
+            st.markdown(f"""
+            <div class="metric-card" style="border-color: #ffc107;">
+                <div class="metric-value" style="color: #ffc107;">{metricas['desenvolvendo']}</div>
+                <div class="metric-label">Desenvolvendo ({metricas['desenvolvendo']/metricas['total']*100:.0f}%)</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         st.markdown("---")
         
@@ -192,370 +413,360 @@ try:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("📊 Status por Nível TMMi")
+            st.subheader("📊 Maturidade por Nível")
             
-            # Agrupar por nível e status
-            status_por_nivel = df_inst.groupby(['Nível TMMi', 'Status Institucional']).size().reset_index(name='count')
+            niveis_data = []
+            for nivel in ['Nível 2', 'Nível 3', 'Nível 4', 'Nível 5']:
+                adotado, total, perc = calcular_nivel_completo(df_inst, nivel)
+                niveis_data.append({
+                    'Nível': nivel.replace('Nível ', 'N'),
+                    'Adotado': adotado,
+                    'Pendente': total - adotado
+                })
             
-            fig = px.bar(
-                status_por_nivel, 
-                x='Nível TMMi', 
-                y='count',
-                color='Status Institucional',
-                title="Distribuição de Status por Nível",
-                color_discrete_map={
-                    'Adotado': '#28a745',
-                    'Desenvolvendo': '#ffc107',
-                    'Em Adoção': '#6c757d',
-                    'Planejado': '#17a2b8'
-                }
-            )
+            df_niveis = pd.DataFrame(niveis_data)
+            
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                name='Adotado',
+                x=df_niveis['Nível'],
+                y=df_niveis['Adotado'],
+                marker_color='#28a745',
+                text=df_niveis['Adotado'],
+                textposition='auto'
+            ))
+            fig.add_trace(go.Bar(
+                name='Pendente',
+                x=df_niveis['Nível'],
+                y=df_niveis['Pendente'],
+                marker_color='#e0e0e0',
+                text=df_niveis['Pendente'],
+                textposition='auto'
+            ))
+            
+            fig.update_layout(barmode='stack', height=400, showlegend=True)
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            st.subheader("🎯 Distribuição de Status")
+            
+            labels = ['Adotado', 'Em Adoção', 'Desenvolvendo', 'Não Iniciado']
+            values = [metricas['adotado'], metricas['em_adocao'], metricas['desenvolvendo'], metricas['nao_iniciado']]
+            colors = ['#28a745', '#17a2b8', '#ffc107', '#6c757d']
+            
+            fig = go.Figure(data=[go.Pie(
+                labels=labels,
+                values=values,
+                hole=.4,
+                marker_colors=colors,
+                textinfo='label+percent',
+                textfont_size=14
+            )])
+            
             fig.update_layout(height=400)
             st.plotly_chart(fig, use_container_width=True)
         
-        with col2:
-            st.subheader("🎯 Progresso Geral")
-            
-            # Pizza chart de status
-            status_counts = df_inst['Status Institucional'].value_counts()
-            
-            fig = go.Figure(data=[go.Pie(
-                labels=status_counts.index,
-                values=status_counts.values,
-                hole=.3,
-                marker_colors=['#28a745', '#ffc107', '#6c757d', '#17a2b8']
-            )])
-            fig.update_layout(height=400, title_text="Distribuição de Status")
-            st.plotly_chart(fig, use_container_width=True)
-        
+        # Destaques
         st.markdown("---")
+        st.subheader("📈 Destaques por Nível")
         
-        # Resumo do Roadmap
-        st.subheader("🗓️ Próximas Entregas (TRI 1)")
-        df_roadmap = data['roadmap']
+        col1, col2 = st.columns(2)
         
-        if not df_roadmap.empty:
-            # Filtrar apenas TRI 1
-            df_tri1 = df_roadmap[df_roadmap['Trimestre'].str.contains('TRI 1', na=False)]
+        with col1:
+            st.markdown(f"""
+            ### ✅ Nível 2 - Gerenciado
+            **{nivel2_adotado}/{nivel2_total} áreas adotadas ({nivel2_perc:.0f}%)**
             
-            if not df_tri1.empty:
-                # Mostrar tabela simplificada
-                roadmap_display = df_tri1[['Fase', 'Entrega', 'Status', 'Responsável']].copy()
-                
-                # Aplicar cores baseado no status
-                def colorir_status(status):
-                    if pd.isna(status):
-                        return 'background-color: white'
-                    status_lower = str(status).lower()
-                    if 'planejado' in status_lower:
-                        return 'background-color: #d1ecf1'
-                    elif 'desenvolvendo' in status_lower or 'andamento' in status_lower:
-                        return 'background-color: #fff3cd'
-                    elif 'adotado' in status_lower or 'concluído' in status_lower:
-                        return 'background-color: #d4edda'
-                    return 'background-color: white'
-                
-                st.dataframe(
-                    roadmap_display.style.applymap(colorir_status, subset=['Status']),
-                    use_container_width=True,
-                    height=300
-                )
-            else:
-                st.info("Nenhuma entrega planejada para TRI 1")
-        else:
-            st.warning("Dados de roadmap não disponíveis")
+            **Áreas Adotadas:**
+            """)
+            
+            nivel2_areas = df_inst[df_inst['Nível TMMi'] == 'Nível 2']
+            for idx, row in nivel2_areas.iterrows():
+                if row['Status Institucional'] == 'Adotado':
+                    st.markdown(f"- ✅ {row['Área de Processo']}")
+            
+            st.markdown("**Falta apenas:**")
+            for idx, row in nivel2_areas.iterrows():
+                if row['Status Institucional'] != 'Adotado':
+                    st.markdown(f"- 🔄 {row['Área de Processo']} ({row['Status Institucional']})")
+        
+        with col2:
+            st.markdown(f"""
+            ### 🔄 Nível 3 - Definido
+            **{nivel3_adotado}/{nivel3_total} áreas adotadas ({nivel3_perc:.0f}%)**
+            
+            **Em Progresso:**
+            """)
+            
+            nivel3_areas = df_inst[df_inst['Nível TMMi'] == 'Nível 3']
+            for idx, row in nivel3_areas.iterrows():
+                status = row['Status Institucional']
+                emoji = "✅" if status == "Adotado" else "📊" if status == "Em Adoção" else "🔄"
+                st.markdown(f"- {emoji} {row['Área de Processo']} ({status})")
     
-    # ================== VISÃO INSTITUCIONAL ==================
-    elif pagina == "🏢 Visão Institucional":
-        st.header("🏢 Visão Institucional do TMMi")
-        st.markdown("Status de adoção das áreas de processo por nível de maturidade")
+    # ================== ÁREAS POR NÍVEL ==================
+    elif pagina == "📋 Áreas por Nível":
+        st.header("📋 Áreas de Processo por Nível TMMi")
         
-        df = data['institucional']
+        for nivel in ['Nível 2', 'Nível 3', 'Nível 4', 'Nível 5']:
+            df_nivel = df_inst[df_inst['Nível TMMi'] == nivel]
+            
+            if len(df_nivel) > 0:
+                adotado, total, perc = calcular_nivel_completo(df_inst, nivel)
+                
+                st.markdown(f"""
+                <div class="nivel-header">
+                    {nivel} - {adotado}/{total} adotadas ({perc:.0f}%)
+                </div>
+                """, unsafe_allow_html=True)
+                
+                for idx, row in df_nivel.iterrows():
+                    area = row['Área de Processo']
+                    status = row['Status Institucional']
+                    obs = row['Observação'] if pd.notna(row['Observação']) else 'N/A'
+                    
+                    status_class = "status-adotado" if status == "Adotado" else \
+                                   "status-desenvolvendo" if status == "Desenvolvendo" else \
+                                   "status-em-adocao" if status == "Em Adoção" else \
+                                   "status-nao-iniciado"
+                    
+                    emoji = "✅" if status == "Adotado" else \
+                            "🔄" if status == "Desenvolvendo" else \
+                            "📊" if status == "Em Adoção" else "⏸️"
+                    
+                    st.markdown(f"""
+                    <div class="area-box">
+                        <strong>{emoji} {area}</strong>
+                        <span class="{status_class}" style="float: right;">{status}</span>
+                        <br/>
+                        <small style="color: #666; margin-top: 0.5rem; display: block;">{obs}</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+    
+    # ================== MANUAL VS AUTOMÁTICO ==================
+    elif pagina == "🔍 Manual vs Automático":
+        st.header("🔍 Comparação: Manual vs Automático")
+        st.markdown("**Compare o status atual (manual) com o status calculado automaticamente baseado no Score TMMi**")
         
-        # Filtros
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            niveis_disponiveis = df['Nível TMMi'].dropna().unique()
-            nivel_selecionado = st.multiselect(
-                "Filtrar por Nível:",
-                options=sorted(niveis_disponiveis),
-                default=sorted(niveis_disponiveis)
-            )
+        st.info("💡 **Como funciona:** O status automático é calculado baseado nos scores das melhorias. Se 80%+ das melhorias têm Score 3, a área é 'Adotado'. Se 50%+ têm Score ≥2, é 'Em Adoção', e assim por diante.")
         
-        # Aplicar filtro
-        if nivel_selecionado:
-            df_filtrado = df[df['Nível TMMi'].isin(nivel_selecionado)]
-        else:
-            df_filtrado = df
-        
-        # Exibir tabela detalhada
-        st.subheader("📋 Detalhamento por Área de Processo")
-        
-        # Preparar dados para exibição
-        df_display = df_filtrado[['Nível TMMi', 'Área de Processo', 'Status Institucional', 'Observação']].copy()
-        df_display = df_display.dropna(subset=['Área de Processo'])
-        
-        # Aplicar formatação condicional
-        def highlight_status(row):
-            status = str(row['Status Institucional']).lower()
-            if 'adotado' in status:
-                return ['background-color: #d4edda'] * len(row)
-            elif 'desenvolvendo' in status:
-                return ['background-color: #fff3cd'] * len(row)
-            elif 'adoção' in status or 'adocao' in status:
-                return ['background-color: #e2e3e5'] * len(row)
-            else:
-                return [''] * len(row)
-        
-        st.dataframe(
-            df_display.style.apply(highlight_status, axis=1),
-            use_container_width=True,
-            height=500
-        )
-        
-        # Resumo por status
-        st.markdown("---")
-        col1, col2, col3 = st.columns(3)
-        
-        status_summary = df_filtrado['Status Institucional'].value_counts()
-        
-        with col1:
-            st.markdown("### ✅ Adotado")
-            st.markdown(f"**{status_summary.get('Adotado', 0)}** áreas")
-            if 'Adotado' in status_summary.index:
-                areas_adotadas = df_filtrado[df_filtrado['Status Institucional'] == 'Adotado']['Área de Processo'].tolist()
-                for area in areas_adotadas:
-                    st.markdown(f"- {area}")
-        
-        with col2:
-            st.markdown("### 🔄 Desenvolvendo")
-            st.markdown(f"**{status_summary.get('Desenvolvendo', 0)}** áreas")
-            if 'Desenvolvendo' in status_summary.index:
-                areas_dev = df_filtrado[df_filtrado['Status Institucional'] == 'Desenvolvendo']['Área de Processo'].tolist()
-                for area in areas_dev:
-                    st.markdown(f"- {area}")
-        
-        with col3:
-            st.markdown("### 📊 Em Adoção")
-            st.markdown(f"**{status_summary.get('Em Adoção', 0)}** áreas")
-            if 'Em Adoção' in status_summary.index:
-                areas_adocao = df_filtrado[df_filtrado['Status Institucional'] == 'Em Adoção']['Área de Processo'].tolist()
-                for area in areas_adocao:
-                    st.markdown(f"- {area}")
+        for nivel in ['Nível 2', 'Nível 3']:
+            df_nivel = df_inst[df_inst['Nível TMMi'] == nivel]
+            
+            if len(df_nivel) > 0:
+                st.markdown(f"""
+                <div class="nivel-header">
+                    {nivel}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                for idx, row in df_nivel.iterrows():
+                    area = row['Área de Processo']
+                    status_manual = row['Status Institucional']
+                    
+                    # Buscar status calculado
+                    chave = f"{nivel}|{area}"
+                    status_auto = None
+                    detalhes = None
+                    
+                    for key, value in status_calc.items():
+                        if value['area'] in area or area in value['area']:
+                            if value['nivel'] == nivel:
+                                status_auto = value['status']
+                                detalhes = value['detalhes']
+                                break
+                    
+                    # Verificar se bate
+                    if status_auto:
+                        match = status_manual == status_auto
+                        box_class = "match-box" if match else "diff-box"
+                        emoji = "✅" if match else "⚠️"
+                        
+                        st.markdown(f"""
+                        <div class="{box_class}">
+                            <strong>{emoji} {area}</strong>
+                            <br/><br/>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div>
+                                    <strong>📋 Manual:</strong> {status_manual}
+                                </div>
+                                <div>
+                                    <strong>🤖 Calculado:</strong> {status_auto}
+                                </div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        if detalhes:
+                            st.markdown(f"""
+                            <br/>
+                            <small style="color: #666;">
+                                📊 Baseado em {detalhes['total']} melhorias | 
+                                Score médio: {detalhes['media']:.1f} | 
+                                Score 3: {detalhes['score_3']}/{detalhes['total']} ({detalhes['perc_3']*100:.0f}%)
+                            </small>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.markdown("</div>", unsafe_allow_html=True)
+                    else:
+                        # Não encontrou cálculo automático
+                        st.markdown(f"""
+                        <div class="area-box">
+                            <strong>❓ {area}</strong>
+                            <br/><br/>
+                            <strong>📋 Manual:</strong> {status_manual}<br/>
+                            <strong>🤖 Calculado:</strong> <em>Sem melhorias mapeadas no Score TMMi</em>
+                        </div>
+                        """, unsafe_allow_html=True)
     
     # ================== VISÃO POR SQUADS ==================
     elif pagina == "👥 Visão por Squads":
-        st.header("👥 Visão por Squads")
-        st.markdown("Acompanhamento das melhorias por squad e trimestre")
+        st.header("👥 Status das Melhorias por Squad")
+        st.markdown("**Acompanhamento detalhado das iniciativas por equipe**")
         
-        df = data['squads']
+        df_squads = data['squads']
+        squad_cols = [col for col in df_squads.columns if col not in ['Unnamed: 0', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5']]
         
-        # Extrair nomes das colunas de squads (a partir da coluna 6)
-        if df.shape[1] > 6:
-            squads_cols = df.columns[6:].tolist()
-            st.info(f"Squads identificados: {', '.join([str(s) for s in squads_cols if not pd.isna(s)])}")
+        st.info(f"📊 **Squads mapeados:** {', '.join(squad_cols)}")
+        st.dataframe(df_squads, use_container_width=True, height=600)
+    
+    # ================== ROADMAP ==================
+    elif pagina == "🗓️ Roadmap 2026":
+        st.header("🗓️ Roadmap Estratégico 2026")
+        st.markdown("**Planejamento transparente de evolução**")
         
-        # Filtros
-        col1, col2, col3 = st.columns(3)
+        df_roadmap = data['roadmap']
+        
+        if 'Trimestre' in df_roadmap.columns:
+            trimestres = ['Todos'] + sorted(df_roadmap['Trimestre'].unique().tolist())
+            trimestre_sel = st.selectbox("Filtrar por Trimestre:", trimestres)
+            
+            if trimestre_sel != 'Todos':
+                df_filtrado = df_roadmap[df_roadmap['Trimestre'] == trimestre_sel]
+            else:
+                df_filtrado = df_roadmap
+        else:
+            df_filtrado = df_roadmap
+        
+        for idx, row in df_filtrado.iterrows():
+            id_melhoria = row.get('ID Melhoria', 'N/A')
+            entrega = row.get('Entrega', 'N/A')
+            tmmi_area = row.get('TMMi (Nível – Área)', 'N/A')
+            status = row.get('Status Geral', 'Planejado')
+            responsavel = row.get('Responsável', 'N/A')
+            
+            status_class = "status-adotado" if 'Adotado' in str(status) else \
+                          "status-desenvolvendo" if 'Desenvolvendo' in str(status) else \
+                          "status-em-adocao" if 'Adoção' in str(status) else \
+                          "status-nao-iniciado"
+            
+            st.markdown(f"""
+            <div class="area-box">
+                <strong>{id_melhoria}</strong>: {entrega}
+                <span class="{status_class}" style="float: right;">{status}</span>
+                <br/>
+                <small style="color: #666;"><strong>TMMi:</strong> {tmmi_area}</small><br/>
+                <small style="color: #666;"><strong>Responsável:</strong> {responsavel}</small>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # ================== POR QUE TMMi? ==================
+    elif pagina == "💡 Por que TMMi?":
+        st.header("💡 Por que estruturar o Framework TMMi na TAG?")
+        
+        st.markdown("""
+        <div class="hero-box">
+            <h2 style="margin-top: 0;">🎯 O Problema que Resolvemos</h2>
+            <p style="font-size: 1.3rem;">
+            <strong>ANTES:</strong> Qualidade era percepção.<br/>
+            <strong>AGORA:</strong> Qualidade é evidência.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
         
         with col1:
-            if 'Trimestre' in df.columns or 1 in df.columns:
-                trimestre_col = 'Trimestre' if 'Trimestre' in df.columns else 1
-                trimestres = df[trimestre_col].dropna().unique()
-                trimestre_selecionado = st.selectbox("Trimestre:", options=['Todos'] + list(trimestres))
+            st.markdown("""
+            ### ❌ ANTES (Sem Framework)
+            
+            **Visão de Qualidade**
+            - Subjetiva, varia por squad
+            - "Acho que tá bom"
+            
+            **Avaliação**
+            - Percepção individual
+            - Conflitos e "achismos"
+            
+            **Priorização**
+            - Sem critério claro
+            - "Tudo é importante"
+            
+            **Automação**
+            - Pontual, sem direção
+            
+            **Incidentes**
+            - Reativo, "apaga incêndio"
+            """)
         
         with col2:
-            if 'Fase' in df.columns or 2 in df.columns:
-                fase_col = 'Fase' if 'Fase' in df.columns else 2
-                fases = df[fase_col].dropna().unique()
-                fase_selecionada = st.selectbox("Fase:", options=['Todas'] + list(fases))
+            st.markdown("""
+            ### ✅ AGORA (Com Framework)
+            
+            **Visão de Qualidade**
+            - Linguagem comum
+            - Níveis objetivos (1-5)
+            
+            **Avaliação**
+            - Score numérico
+            - Baseado em evidências
+            
+            **Priorização**
+            - Roadmap transparente
+            - Foco em impacto
+            
+            **Automação**
+            - Direcionada por risco
+            
+            **Incidentes**
+            - Prevenção estruturada
+            """)
         
-        # Exibir dados
-        st.subheader("📊 Status das Melhorias por Squad")
-        st.dataframe(df, use_container_width=True, height=600)
-    
-    # ================== ROADMAP TRIMESTRAL ==================
-    elif pagina == "🗓️ Roadmap Trimestral":
-        st.header("🗓️ Roadmap Trimestral")
-        st.markdown("Planejamento de entregas por trimestre")
+        st.markdown("---")
         
-        df = data['roadmap']
+        st.markdown("""
+        ### 📊 Ganhos Diretos para a TAG
         
-        if not df.empty:
-            # Filtro de trimestre
-            if 'Trimestre' in df.columns:
-                trimestres = df['Trimestre'].dropna().unique()
-                trimestre_filtro = st.selectbox("Selecione o Trimestre:", options=['Todos'] + list(trimestres))
-                
-                if trimestre_filtro != 'Todos':
-                    df_filtrado = df[df['Trimestre'] == trimestre_filtro]
-                else:
-                    df_filtrado = df
-            else:
-                df_filtrado = df
-            
-            # Exibir roadmap
-            st.subheader("📋 Entregas Planejadas")
-            
-            # Selecionar colunas relevantes
-            colunas_display = ['Trimestre', 'Fase', 'Entrega', 'TMMi (Nível – Área)', 'Envolvidos', 'Status', 'Responsável']
-            colunas_existentes = [col for col in colunas_display if col in df_filtrado.columns]
-            
-            df_display = df_filtrado[colunas_existentes].copy()
-            
-            # Aplicar cores por status
-            def colorir_roadmap(row):
-                if 'Status' in row.index:
-                    status = str(row['Status']).lower()
-                    if 'planejado' in status:
-                        return ['background-color: #d1ecf1'] * len(row)
-                    elif 'andamento' in status or 'desenvolvendo' in status:
-                        return ['background-color: #fff3cd'] * len(row)
-                    elif 'concluído' in status or 'adotado' in status:
-                        return ['background-color: #d4edda'] * len(row)
-                    elif 'despriorizado' in status:
-                        return ['background-color: #f8d7da'] * len(row)
-                return [''] * len(row)
-            
-            st.dataframe(
-                df_display.style.apply(colorir_roadmap, axis=1),
-                use_container_width=True,
-                height=600
-            )
-            
-            # Estatísticas do roadmap
-            st.markdown("---")
-            st.subheader("📊 Estatísticas do Roadmap")
-            
-            if 'Status' in df_filtrado.columns:
-                col1, col2, col3 = st.columns(3)
-                
-                status_counts = df_filtrado['Status'].value_counts()
-                
-                with col1:
-                    st.metric("Total de Entregas", len(df_filtrado))
-                
-                with col2:
-                    planejado = status_counts.get('Planejado', 0)
-                    st.metric("Planejado", planejado)
-                
-                with col3:
-                    if 'Fase' in df_filtrado.columns:
-                        fases_unicas = df_filtrado['Fase'].nunique()
-                        st.metric("Fases Diferentes", fases_unicas)
-        else:
-            st.warning("Dados de roadmap não disponíveis")
-    
-    # ================== SCORE TMMi ==================
-    elif pagina == "📈 Score TMMi":
-        st.header("📈 Score TMMi")
-        st.markdown("Pontuação e progresso das melhorias")
+        - ✅ **Menos ruído:** QA, Dev, Produto e Gestão falam a mesma língua
+        - ✅ **Avaliação justa:** Baseada em evidências, não em percepção
+        - ✅ **Foco certo:** Priorização clara do que evolui primeiro
+        - ✅ **Crescimento sustentável:** Práticas escaláveis
+        - ✅ **Menos dependência:** Processo sustenta qualidade
+        - ✅ **Automação inteligente:** ROI mensurável
+        - ✅ **Menos incidentes:** Prevenção ao invés de reação
+        - ✅ **Decisão baseada em dados:** Indicadores comparáveis
+        - ✅ **Clareza para liderança:** Evolução em níveis claros
+        - ✅ **Alinhamento estratégico:** Qualidade = crescimento
         
-        df = data['score']
+        ---
         
-        st.subheader("📊 Scores por Squad e Melhoria")
-        st.dataframe(df, use_container_width=True, height=600)
+        ### 🎯 Resumo Executivo
         
-        # Análise de scores
-        if 'SCORE' in df.columns:
-            st.markdown("---")
-            st.subheader("📈 Análise de Pontuação")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                # Score médio
-                score_medio = df['SCORE'].mean()
-                st.metric("Score Médio", f"{score_medio:.2f}")
-                
-                # Distribuição de scores
-                fig = px.histogram(df, x='SCORE', title='Distribuição de Scores', nbins=10)
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with col2:
-                # Status vs Score
-                if 'STATUS' in df.columns:
-                    score_por_status = df.groupby('STATUS')['SCORE'].mean().reset_index()
-                    fig = px.bar(score_por_status, x='STATUS', y='SCORE', title='Score Médio por Status')
-                    st.plotly_chart(fig, use_container_width=True)
-    
-    # ================== MAPA DO TMMi ==================
-    elif pagina == "🗺️ Mapa do TMMi":
-        st.header("🗺️ Mapa do TMMi")
-        st.markdown("Entendendo os níveis e áreas de processo do TMMi")
-        
-        df = data['mapa']
-        
-        # Organizar por nível
-        if 'Nível' in df.columns:
-            niveis = df['Nível'].dropna().unique()
-            
-            for nivel in sorted(niveis):
-                df_nivel = df[df['Nível'] == nivel]
-                
-                st.subheader(f"📚 Nível {nivel}")
-                
-                for idx, row in df_nivel.iterrows():
-                    area = row.get('Área de Processo', 'N/A')
-                    descricao = row.get('Descrição', 'Sem descrição')
-                    
-                    with st.expander(f"📖 {area}"):
-                        st.markdown(descricao)
-                
-                st.markdown("---")
-        else:
-            st.dataframe(df, use_container_width=True, height=600)
-    
-    # ================== CRITÉRIOS DE ENTREGA ==================
-    elif pagina == "📋 Critérios de Entrega":
-        st.header("📋 Critérios de Entrega (Definition of Done)")
-        st.markdown("Critérios detalhados para validação das melhorias")
-        
-        df = data['criterios']
-        
-        # Filtros
-        if 'ID MELHORIA' in df.columns:
-            melhorias = df['ID MELHORIA'].dropna().unique()
-            melhoria_selecionada = st.selectbox("Filtrar por Melhoria:", options=['Todas'] + list(melhorias))
-            
-            if melhoria_selecionada != 'Todas':
-                df_filtrado = df[df['ID MELHORIA'] == melhoria_selecionada]
-            else:
-                df_filtrado = df
-        else:
-            df_filtrado = df
-        
-        # Exibir critérios
-        st.subheader("📝 Critérios Detalhados")
-        st.dataframe(df_filtrado, use_container_width=True, height=600)
-        
-        # Estatísticas de atendimento
-        if 'ATENDIDO' in df_filtrado.columns:
-            st.markdown("---")
-            st.subheader("📊 Taxa de Atendimento")
-            
-            col1, col2, col3 = st.columns(3)
-            
-            total_criterios = len(df_filtrado)
-            atendidos = df_filtrado['ATENDIDO'].notna().sum()
-            
-            with col1:
-                st.metric("Total de Critérios", total_criterios)
-            with col2:
-                st.metric("Critérios Atendidos", atendidos)
-            with col3:
-                if total_criterios > 0:
-                    taxa = (atendidos / total_criterios) * 100
-                    st.metric("Taxa de Atendimento", f"{taxa:.1f}%")
+        > **O framework TMMi na TAG não é sobre "seguir um modelo", é sobre criar 
+        > previsibilidade, reduzir risco e sustentar o crescimento da empresa de 
+        > forma prática e transparente.**
+        """)
     
     # Footer
     st.markdown("---")
-    st.markdown("""
+    st.markdown(f"""
     <div style='text-align: center; color: #666; padding: 1rem;'>
-        <p>Framework TMMi - TAG IMF | Atualizado em: {}</p>
+        <p><strong>Framework TMMi - TAG IMF</strong></p>
+        <p>Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
+        <p style='font-size: 0.9rem;'>De Subjetivo para Objetivo | De Percepção para Evidência</p>
     </div>
-    """.format(datetime.now().strftime("%d/%m/%Y %H:%M")), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 except Exception as e:
-    st.error(f"Erro ao carregar dados: {str(e)}")
-    st.info("Certifique-se de que o arquivo 'Framework_-_TMMi-TAG.xlsx' está no diretório correto.")
+    st.error(f"⚠️ Erro: {str(e)}")
+    st.info("💡 Certifique-se de que o arquivo 'Framework_-_TMMi-TAG__1_.xlsx' está no mesmo diretório do app.")
