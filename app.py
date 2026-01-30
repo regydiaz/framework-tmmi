@@ -1,9 +1,7 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
-import re
 
 # Configuração da página
 st.set_page_config(
@@ -96,8 +94,8 @@ st.markdown("""
         display: inline-block;
     }
     .status-nao-iniciado {
-        background-color: #e2e3e5;
-        color: #383d41;
+        background-color: #f8d7da;
+        color: #721c24;
         padding: 0.3rem 0.8rem;
         border-radius: 15px;
         font-weight: bold;
@@ -120,124 +118,8 @@ st.markdown("""
         font-size: 1.3rem;
         font-weight: bold;
     }
-    .diff-box {
-        background: #fff3cd;
-        border-left: 5px solid #ffc107;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        border-radius: 5px;
-    }
-    .match-box {
-        background: #d4edda;
-        border-left: 5px solid #28a745;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        border-radius: 5px;
-    }
 </style>
 """, unsafe_allow_html=True)
-
-# Funções de cálculo
-def normalizar_area(area_raw):
-    """Normaliza nome da área de processo"""
-    if pd.isna(area_raw):
-        return None, None
-    
-    area = str(area_raw).strip()
-    
-    # Se tem múltiplos níveis, pega o maior
-    if '\n' in area:
-        linhas = [l.strip() for l in area.split('\n') if l.strip()]
-        niveis = []
-        for linha in linhas:
-            match = re.search(r'N(\d+)', linha)
-            if match:
-                niveis.append((int(match.group(1)), linha))
-        
-        if niveis:
-            area = max(niveis, key=lambda x: x[0])[1]
-    
-    # Extrair nível
-    nivel_match = re.search(r'N(\d+)', area)
-    nivel = f"Nível {nivel_match.group(1)}" if nivel_match else None
-    
-    # Normalizar nome
-    area_lower = area.lower()
-    
-    if 'política' in area_lower:
-        nome_area = "Política e Estratégia de Testes"
-    elif 'planejamento' in area_lower:
-        nome_area = "Planejamento de Testes"
-    elif 'monitoramento' in area_lower or 'controle' in area_lower:
-        nome_area = "Monitoramento e Controle dos Testes"
-    elif 'desenho' in area_lower or 'execução' in area_lower:
-        nome_area = "Desenho e Execução de Testes"
-    elif 'defeito' in area_lower or 'gerenciamento' in area_lower:
-        nome_area = "Gerenciamento de Defeitos"
-    elif 'ambiente' in area_lower:
-        nome_area = "Ambiente de Testes"
-    elif 'organização' in area_lower:
-        nome_area = "Organização de Testes"
-    elif 'treinamento' in area_lower:
-        nome_area = "Programa de Treinamento em Testes"
-    elif 'integração' in area_lower or 'sdlc' in area_lower:
-        nome_area = "Integração dos Testes ao SDLC"
-    elif 'não funcionais' in area_lower or 'nfr' in area_lower:
-        nome_area = "Testes Não Funcionais"
-    elif 'revisões' in area_lower or 'review' in area_lower or 'técnicas' in area_lower:
-        nome_area = "Revisões Técnicas (Quality Review)"
-    elif 'medição' in area_lower:
-        nome_area = "Medição dos Testes"
-    elif 'avaliação' in area_lower:
-        nome_area = "Avaliação da Qualidade do Produto"
-    elif 'prevenção' in area_lower:
-        nome_area = "Prevenção de Defeitos"
-    elif 'otimização' in area_lower:
-        nome_area = "Otimização do Processo de Testes"
-    elif 'controle da qualidade' in area_lower:
-        nome_area = "Controle da Qualidade"
-    elif 'avançadas' in area_lower:
-        nome_area = "Revisões Avançadas"
-    else:
-        nome_area = area.split('–')[1].strip() if '–' in area else area
-    
-    return nivel, nome_area
-
-def calcular_status(scores):
-    """Calcula status baseado em lista de scores"""
-    scores = [s for s in scores if pd.notna(s) and s > 0]
-    
-    if not scores:
-        return "Não Iniciado", 0, {}
-    
-    total = len(scores)
-    score_3 = sum(1 for s in scores if s >= 3)
-    score_2_mais = sum(1 for s in scores if s >= 2)
-    score_1_mais = sum(1 for s in scores if s >= 1)
-    
-    perc_3 = score_3 / total
-    perc_2 = score_2_mais / total
-    perc_1 = score_1_mais / total
-    
-    detalhes = {
-        'total': total,
-        'score_3': score_3,
-        'score_2_mais': score_2_mais,
-        'score_1_mais': score_1_mais,
-        'perc_3': perc_3,
-        'perc_2': perc_2,
-        'perc_1': perc_1,
-        'media': sum(scores) / total
-    }
-    
-    if perc_3 >= 0.8:
-        return "Adotado", perc_3, detalhes
-    elif perc_2 >= 0.5:
-        return "Em Adoção", perc_2, detalhes
-    elif perc_1 >= 0.3:
-        return "Desenvolvendo", perc_1, detalhes
-    else:
-        return "Não Iniciado", 0, detalhes
 
 # Carregar dados
 @st.cache_data
@@ -245,53 +127,34 @@ def load_data():
     file_path = 'Framework_-_TMMi-TAG__1_.xlsx'
     
     try:
-        # Visão Institucional (Manual)
+        # Visão Institucional
         df_inst = pd.read_excel(file_path, sheet_name='TMMi - Visão Institucional', skiprows=2)
         df_inst.columns = ['Col0', 'Nível TMMi', 'Área de Processo', 'Status Institucional', 'Observação']
         df_inst['Nível TMMi'] = df_inst['Nível TMMi'].ffill()
         df_inst = df_inst[df_inst['Área de Processo'].notna()].drop('Col0', axis=1)
         
-        # Score TMMi (para cálculo automático)
-        df_score = pd.read_excel(file_path, sheet_name='Score TMMi', skiprows=2)
-        df_score_clean = df_score[
-            (df_score['ID_MELHORIA'].notna()) & 
-            (df_score['ID_MELHORIA'] != 'ID_MELHORIA') &
-            (df_score['SCORE'].notna()) &
-            (pd.to_numeric(df_score['SCORE'], errors='coerce').notna())
-        ].copy()
-        df_score_clean['SCORE'] = pd.to_numeric(df_score_clean['SCORE'])
+        # Visão Squads
+        df_squads = pd.read_excel(file_path, sheet_name='TMMi - Visão Squads', skiprows=3)
         
-        # Normalizar áreas no Score
-        df_score_clean[['NIVEL', 'AREA_NOME']] = df_score_clean['NÍVEL E ÁREA DE PROCESSO'].apply(
-            lambda x: pd.Series(normalizar_area(x))
-        )
+        # Renomear colunas Unnamed
+        rename_map = {}
+        squad_names = ['ID', 'Trimestre', 'Fase', 'Nível e Área', 'Envolvidos', 'Status', 
+                       'Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Interop', 'Negotiation', 'Consent']
         
-        # Calcular status automático por área
-        status_calculado = {}
-        for (nivel, area), group in df_score_clean.groupby(['NIVEL', 'AREA_NOME']):
-            if nivel and area:
-                scores = group['SCORE'].tolist()
-                status, perc, detalhes = calcular_status(scores)
-                status_calculado[f"{nivel}|{area}"] = {
-                    'nivel': nivel,
-                    'area': area,
-                    'status': status,
-                    'percentual': perc,
-                    'detalhes': detalhes
-                }
+        for i, col in enumerate(df_squads.columns):
+            if i < len(squad_names):
+                rename_map[col] = squad_names[i]
+        
+        df_squads = df_squads.rename(columns=rename_map)
+        df_squads = df_squads.dropna(how='all')
         
         # Roadmap
         df_roadmap = pd.read_excel(file_path, sheet_name='ANUAL - Roadmap por Squads')
         
-        # Visão Squads
-        df_squads = pd.read_excel(file_path, sheet_name='TMMi - Visão Squads', skiprows=3)
-        
         return {
             'institucional': df_inst,
-            'score': df_score_clean,
-            'status_calculado': status_calculado,
-            'roadmap': df_roadmap,
-            'squads': df_squads
+            'squads': df_squads,
+            'roadmap': df_roadmap
         }
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
@@ -304,7 +167,7 @@ def calcular_metricas(df):
     em_adocao = len(df[df['Status Institucional'] == 'Em Adoção'])
     nao_iniciado = len(df[df['Status Institucional'] == 'Não Iniciado'])
     
-    score = (adotado * 3 + em_adocao * 2 + desenvolvendo * 1.5) / total
+    score = (adotado * 3 + em_adocao * 2 + desenvolvendo * 1.5) / total if total > 0 else 0
     score_5 = score / 3 * 5
     
     return {
@@ -320,11 +183,43 @@ def calcular_metricas(df):
 def calcular_nivel_completo(df, nivel):
     df_nivel = df[df['Nível TMMi'] == nivel]
     if len(df_nivel) == 0:
-        return 0, 0, 0
+        return 0, 0, 0, 0, 0
+    
     total = len(df_nivel)
     adotado = len(df_nivel[df_nivel['Status Institucional'] == 'Adotado'])
+    desenvolvendo = len(df_nivel[df_nivel['Status Institucional'] == 'Desenvolvendo'])
+    em_adocao = len(df_nivel[df_nivel['Status Institucional'] == 'Em Adoção'])
+    nao_iniciado = len(df_nivel[df_nivel['Status Institucional'] == 'Não Iniciado'])
+    
     percentual = (adotado / total * 100) if total > 0 else 0
-    return adotado, total, percentual
+    return adotado, desenvolvendo, em_adocao, nao_iniciado, percentual
+
+def estilizar_squads_df(df):
+    """Aplica cores nas células baseado no status"""
+    
+    # Colunas de squads (últimas 7)
+    squad_cols = ['Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Interop', 'Negotiation', 'Consent']
+    
+    def color_status(val):
+        val_str = str(val).strip().upper()
+        
+        if 'ADOTADO' in val_str or 'ADOTADA' in val_str:
+            return 'background-color: #d4edda; color: #155724; font-weight: bold;'
+        elif 'PLANEJADO' in val_str or 'PLANEJADA' in val_str:
+            return 'background-color: #fff3cd; color: #856404; font-weight: bold;'
+        elif 'DESENVOLVENDO' in val_str:
+            return 'background-color: #ffe5b4; color: #856404; font-weight: bold;'
+        elif 'ADOÇÃO' in val_str or 'EM ADOÇÃO' in val_str:
+            return 'background-color: #d1ecf1; color: #0c5460; font-weight: bold;'
+        elif 'NÃO INICIADO' in val_str or 'NAO INICIADO' in val_str:
+            return 'background-color: #f8d7da; color: #721c24; font-weight: bold;'
+        else:
+            return ''
+    
+    # Aplicar estilo apenas nas colunas de squads
+    styled_df = df.style.applymap(color_status, subset=squad_cols)
+    
+    return styled_df
 
 try:
     data = load_data()
@@ -333,7 +228,7 @@ try:
         st.stop()
     
     df_inst = data['institucional']
-    status_calc = data['status_calculado']
+    df_squads = data['squads']
     metricas = calcular_metricas(df_inst)
     
     # Header
@@ -347,7 +242,6 @@ try:
         [
             "🏠 Visão Executiva",
             "📋 Áreas por Nível",
-            "🔍 Manual vs Automático",
             "👥 Visão por Squads",
             "🗓️ Roadmap 2026",
             "💡 Por que TMMi?"
@@ -357,8 +251,8 @@ try:
     # ================== VISÃO EXECUTIVA ==================
     if pagina == "🏠 Visão Executiva":
         
-        nivel2_adotado, nivel2_total, nivel2_perc = calcular_nivel_completo(df_inst, 'Nível 2')
-        nivel3_adotado, nivel3_total, nivel3_perc = calcular_nivel_completo(df_inst, 'Nível 3')
+        nivel2_adotado, nivel2_desenv, nivel2_em_adocao, nivel2_nao_init, nivel2_perc = calcular_nivel_completo(df_inst, 'Nível 2')
+        nivel3_adotado, nivel3_desenv, nivel3_em_adocao, nivel3_nao_init, nivel3_perc = calcular_nivel_completo(df_inst, 'Nível 3')
         
         st.markdown(f"""
         <div class="hero-box">
@@ -372,7 +266,7 @@ try:
         </div>
         """, unsafe_allow_html=True)
         
-        # Métricas
+        # Métricas em cards
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
@@ -415,18 +309,23 @@ try:
         with col1:
             st.subheader("📊 Maturidade por Nível")
             
+            # CORRIGIDO: Mostrar TODOS os status
             niveis_data = []
             for nivel in ['Nível 2', 'Nível 3', 'Nível 4', 'Nível 5']:
-                adotado, total, perc = calcular_nivel_completo(df_inst, nivel)
+                adot, desenv, em_adoc, nao_init, perc = calcular_nivel_completo(df_inst, nivel)
                 niveis_data.append({
                     'Nível': nivel.replace('Nível ', 'N'),
-                    'Adotado': adotado,
-                    'Pendente': total - adotado
+                    'Adotado': adot,
+                    'Em Adoção': em_adoc,
+                    'Desenvolvendo': desenv,
+                    'Não Iniciado': nao_init
                 })
             
             df_niveis = pd.DataFrame(niveis_data)
             
             fig = go.Figure()
+            
+            # Adotado (verde)
             fig.add_trace(go.Bar(
                 name='Adotado',
                 x=df_niveis['Nível'],
@@ -435,16 +334,44 @@ try:
                 text=df_niveis['Adotado'],
                 textposition='auto'
             ))
+            
+            # Em Adoção (azul)
             fig.add_trace(go.Bar(
-                name='Pendente',
+                name='Em Adoção',
                 x=df_niveis['Nível'],
-                y=df_niveis['Pendente'],
-                marker_color='#e0e0e0',
-                text=df_niveis['Pendente'],
+                y=df_niveis['Em Adoção'],
+                marker_color='#17a2b8',
+                text=df_niveis['Em Adoção'],
                 textposition='auto'
             ))
             
-            fig.update_layout(barmode='stack', height=400, showlegend=True)
+            # Desenvolvendo (amarelo)
+            fig.add_trace(go.Bar(
+                name='Desenvolvendo',
+                x=df_niveis['Nível'],
+                y=df_niveis['Desenvolvendo'],
+                marker_color='#ffc107',
+                text=df_niveis['Desenvolvendo'],
+                textposition='auto'
+            ))
+            
+            # Não Iniciado (cinza)
+            fig.add_trace(go.Bar(
+                name='Não Iniciado',
+                x=df_niveis['Nível'],
+                y=df_niveis['Não Iniciado'],
+                marker_color='#dc3545',
+                text=df_niveis['Não Iniciado'],
+                textposition='auto'
+            ))
+            
+            fig.update_layout(
+                barmode='stack',
+                height=400,
+                showlegend=True,
+                xaxis_title="Nível TMMi",
+                yaxis_title="Número de Áreas"
+            )
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
@@ -452,7 +379,7 @@ try:
             
             labels = ['Adotado', 'Em Adoção', 'Desenvolvendo', 'Não Iniciado']
             values = [metricas['adotado'], metricas['em_adocao'], metricas['desenvolvendo'], metricas['nao_iniciado']]
-            colors = ['#28a745', '#17a2b8', '#ffc107', '#6c757d']
+            colors = ['#28a745', '#17a2b8', '#ffc107', '#dc3545']
             
             fig = go.Figure(data=[go.Pie(
                 labels=labels,
@@ -466,13 +393,14 @@ try:
             fig.update_layout(height=400)
             st.plotly_chart(fig, use_container_width=True)
         
-        # Destaques
+        # Destaques por nível
         st.markdown("---")
         st.subheader("📈 Destaques por Nível")
         
         col1, col2 = st.columns(2)
         
         with col1:
+            nivel2_total = nivel2_adotado + nivel2_desenv + nivel2_em_adocao + nivel2_nao_init
             st.markdown(f"""
             ### ✅ Nível 2 - Gerenciado
             **{nivel2_adotado}/{nivel2_total} áreas adotadas ({nivel2_perc:.0f}%)**
@@ -491,6 +419,7 @@ try:
                     st.markdown(f"- 🔄 {row['Área de Processo']} ({row['Status Institucional']})")
         
         with col2:
+            nivel3_total = nivel3_adotado + nivel3_desenv + nivel3_em_adocao + nivel3_nao_init
             st.markdown(f"""
             ### 🔄 Nível 3 - Definido
             **{nivel3_adotado}/{nivel3_total} áreas adotadas ({nivel3_perc:.0f}%)**
@@ -501,7 +430,9 @@ try:
             nivel3_areas = df_inst[df_inst['Nível TMMi'] == 'Nível 3']
             for idx, row in nivel3_areas.iterrows():
                 status = row['Status Institucional']
-                emoji = "✅" if status == "Adotado" else "📊" if status == "Em Adoção" else "🔄"
+                emoji = "✅" if status == "Adotado" else \
+                        "📊" if status == "Em Adoção" else \
+                        "🔄" if status == "Desenvolvendo" else "⏸️"
                 st.markdown(f"- {emoji} {row['Área de Processo']} ({status})")
     
     # ================== ÁREAS POR NÍVEL ==================
@@ -512,11 +443,12 @@ try:
             df_nivel = df_inst[df_inst['Nível TMMi'] == nivel]
             
             if len(df_nivel) > 0:
-                adotado, total, perc = calcular_nivel_completo(df_inst, nivel)
+                adot, desenv, em_adoc, nao_init, perc = calcular_nivel_completo(df_inst, nivel)
+                total = adot + desenv + em_adoc + nao_init
                 
                 st.markdown(f"""
                 <div class="nivel-header">
-                    {nivel} - {adotado}/{total} adotadas ({perc:.0f}%)
+                    {nivel} - {adot}/{total} adotadas ({perc:.0f}%)
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -543,92 +475,28 @@ try:
                     </div>
                     """, unsafe_allow_html=True)
     
-    # ================== MANUAL VS AUTOMÁTICO ==================
-    elif pagina == "🔍 Manual vs Automático":
-        st.header("🔍 Comparação: Manual vs Automático")
-        st.markdown("**Compare o status atual (manual) com o status calculado automaticamente baseado no Score TMMi**")
-        
-        st.info("💡 **Como funciona:** O status automático é calculado baseado nos scores das melhorias. Se 80%+ das melhorias têm Score 3, a área é 'Adotado'. Se 50%+ têm Score ≥2, é 'Em Adoção', e assim por diante.")
-        
-        for nivel in ['Nível 2', 'Nível 3']:
-            df_nivel = df_inst[df_inst['Nível TMMi'] == nivel]
-            
-            if len(df_nivel) > 0:
-                st.markdown(f"""
-                <div class="nivel-header">
-                    {nivel}
-                </div>
-                """, unsafe_allow_html=True)
-                
-                for idx, row in df_nivel.iterrows():
-                    area = row['Área de Processo']
-                    status_manual = row['Status Institucional']
-                    
-                    # Buscar status calculado
-                    chave = f"{nivel}|{area}"
-                    status_auto = None
-                    detalhes = None
-                    
-                    for key, value in status_calc.items():
-                        if value['area'] in area or area in value['area']:
-                            if value['nivel'] == nivel:
-                                status_auto = value['status']
-                                detalhes = value['detalhes']
-                                break
-                    
-                    # Verificar se bate
-                    if status_auto:
-                        match = status_manual == status_auto
-                        box_class = "match-box" if match else "diff-box"
-                        emoji = "✅" if match else "⚠️"
-                        
-                        st.markdown(f"""
-                        <div class="{box_class}">
-                            <strong>{emoji} {area}</strong>
-                            <br/><br/>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                                <div>
-                                    <strong>📋 Manual:</strong> {status_manual}
-                                </div>
-                                <div>
-                                    <strong>🤖 Calculado:</strong> {status_auto}
-                                </div>
-                            </div>
-                        """, unsafe_allow_html=True)
-                        
-                        if detalhes:
-                            st.markdown(f"""
-                            <br/>
-                            <small style="color: #666;">
-                                📊 Baseado em {detalhes['total']} melhorias | 
-                                Score médio: {detalhes['media']:.1f} | 
-                                Score 3: {detalhes['score_3']}/{detalhes['total']} ({detalhes['perc_3']*100:.0f}%)
-                            </small>
-                            </div>
-                            """, unsafe_allow_html=True)
-                        else:
-                            st.markdown("</div>", unsafe_allow_html=True)
-                    else:
-                        # Não encontrou cálculo automático
-                        st.markdown(f"""
-                        <div class="area-box">
-                            <strong>❓ {area}</strong>
-                            <br/><br/>
-                            <strong>📋 Manual:</strong> {status_manual}<br/>
-                            <strong>🤖 Calculado:</strong> <em>Sem melhorias mapeadas no Score TMMi</em>
-                        </div>
-                        """, unsafe_allow_html=True)
-    
     # ================== VISÃO POR SQUADS ==================
     elif pagina == "👥 Visão por Squads":
         st.header("👥 Status das Melhorias por Squad")
         st.markdown("**Acompanhamento detalhado das iniciativas por equipe**")
         
-        df_squads = data['squads']
-        squad_cols = [col for col in df_squads.columns if col not in ['Unnamed: 0', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5']]
+        squad_cols = ['Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Interop', 'Negotiation', 'Consent']
         
         st.info(f"📊 **Squads mapeados:** {', '.join(squad_cols)}")
-        st.dataframe(df_squads, use_container_width=True, height=600)
+        
+        # Aplicar cores
+        styled_df = estilizar_squads_df(df_squads)
+        
+        st.dataframe(styled_df, use_container_width=True, height=600)
+        
+        st.markdown("""
+        **Legenda:**
+        - 🟢 **Verde**: Adotado
+        - 🔵 **Azul**: Em Adoção
+        - 🟡 **Amarelo**: Planejado
+        - 🟠 **Laranja**: Desenvolvendo
+        - 🔴 **Vermelho**: Não Iniciado
+        """)
     
     # ================== ROADMAP ==================
     elif pagina == "🗓️ Roadmap 2026":
@@ -638,7 +506,7 @@ try:
         df_roadmap = data['roadmap']
         
         if 'Trimestre' in df_roadmap.columns:
-            trimestres = ['Todos'] + sorted(df_roadmap['Trimestre'].unique().tolist())
+            trimestres = ['Todos'] + sorted(df_roadmap['Trimestre'].dropna().unique().tolist())
             trimestre_sel = st.selectbox("Filtrar por Trimestre:", trimestres)
             
             if trimestre_sel != 'Todos':
@@ -649,6 +517,9 @@ try:
             df_filtrado = df_roadmap
         
         for idx, row in df_filtrado.iterrows():
+            if pd.isna(row.get('ID Melhoria')):
+                continue
+                
             id_melhoria = row.get('ID Melhoria', 'N/A')
             entrega = row.get('Entrega', 'N/A')
             tmmi_area = row.get('TMMi (Nível – Área)', 'N/A')
@@ -690,45 +561,21 @@ try:
             st.markdown("""
             ### ❌ ANTES (Sem Framework)
             
-            **Visão de Qualidade**
-            - Subjetiva, varia por squad
-            - "Acho que tá bom"
-            
-            **Avaliação**
-            - Percepção individual
-            - Conflitos e "achismos"
-            
-            **Priorização**
-            - Sem critério claro
-            - "Tudo é importante"
-            
-            **Automação**
-            - Pontual, sem direção
-            
-            **Incidentes**
-            - Reativo, "apaga incêndio"
+            - Visão subjetiva, varia por squad
+            - Avaliação baseada em percepção
+            - Sem critério claro de priorização
+            - Automação pontual, sem direção
+            - Reativo: "apaga incêndio"
             """)
         
         with col2:
             st.markdown("""
             ### ✅ AGORA (Com Framework)
             
-            **Visão de Qualidade**
-            - Linguagem comum
-            - Níveis objetivos (1-5)
-            
-            **Avaliação**
-            - Score numérico
-            - Baseado em evidências
-            
-            **Priorização**
-            - Roadmap transparente
-            - Foco em impacto
-            
-            **Automação**
-            - Direcionada por risco
-            
-            **Incidentes**
+            - Linguagem comum, níveis objetivos
+            - Score numérico baseado em evidências
+            - Roadmap transparente, foco em impacto
+            - Automação direcionada por risco
             - Prevenção estruturada
             """)
         
@@ -747,14 +594,6 @@ try:
         - ✅ **Decisão baseada em dados:** Indicadores comparáveis
         - ✅ **Clareza para liderança:** Evolução em níveis claros
         - ✅ **Alinhamento estratégico:** Qualidade = crescimento
-        
-        ---
-        
-        ### 🎯 Resumo Executivo
-        
-        > **O framework TMMi na TAG não é sobre "seguir um modelo", é sobre criar 
-        > previsibilidade, reduzir risco e sustentar o crescimento da empresa de 
-        > forma prática e transparente.**
         """)
     
     # Footer
@@ -770,3 +609,5 @@ try:
 except Exception as e:
     st.error(f"⚠️ Erro: {str(e)}")
     st.info("💡 Certifique-se de que o arquivo 'Framework_-_TMMi-TAG__1_.xlsx' está no mesmo diretório do app.")
+    import traceback
+    st.code(traceback.format_exc())
