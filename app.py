@@ -600,7 +600,7 @@ try:
     st.markdown("---")
     st.markdown(f"""
     <div style='text-align: center; color: #666; padding: 1rem;'>
-        <p><strong>Framework TMMi - TAG IMF</strong></p>
+        <p><strong>QA Accelerate - TAG IMF</strong></p>
         <p>Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
         <p style='font-size: 0.9rem;'>De Subjetivo para Objetivo | De Percepção para Evidência</p>
     </div>
