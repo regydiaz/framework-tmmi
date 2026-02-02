@@ -232,7 +232,7 @@ try:
     metricas = calcular_metricas(df_inst)
     
     # Header
-    st.markdown('<div class="main-header">🎯 Framework TMMi - TAG IMF</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">🎯  QA Accelerate - TAG IMF</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle"><strong>De Subjetivo para Objetivo</strong> | <strong>De Percepção para Evidência</strong></div>', unsafe_allow_html=True)
     
     # Sidebar
