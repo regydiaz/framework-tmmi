@@ -5,7 +5,7 @@ from datetime import datetime
 
 # Configuração da página
 st.set_page_config(
-    page_title="QA Accelerate - TAG IMF",
+    page_title="Framework TMMi - TAG IMF",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -197,7 +197,7 @@ def calcular_nivel_completo(df, nivel):
 def estilizar_squads_df(df):
     """Aplica cores nas células baseado no status"""
     
-    # Colunas de squads (últimas 7)
+    # Colunas de squads (5 squads)
     squad_cols = ['Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Verus']
     
     def color_status(val):
@@ -232,7 +232,7 @@ try:
     metricas = calcular_metricas(df_inst)
     
     # Header
-    st.markdown('<div class="main-header">🎯  QA Accelerate - TAG IMF</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">🎯 Framework TMMi - TAG IMF</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle"><strong>De Subjetivo para Objetivo</strong> | <strong>De Percepção para Evidência</strong></div>', unsafe_allow_html=True)
     
     # Sidebar
@@ -267,7 +267,7 @@ try:
         """, unsafe_allow_html=True)
         
         # Métricas em cards
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3, col4, col5 = st.columns(5)
         
         with col1:
             st.markdown(f"""
@@ -301,6 +301,14 @@ try:
             </div>
             """, unsafe_allow_html=True)
         
+        with col5:
+            st.markdown(f"""
+            <div class="metric-card" style="border-color: #dc3545;">
+                <div class="metric-value" style="color: #dc3545;">{metricas['nao_iniciado']}</div>
+                <div class="metric-label">Não Iniciado ({metricas['nao_iniciado']/metricas['total']*100:.0f}%)</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
         st.markdown("---")
         
         # Gráficos
@@ -309,7 +317,7 @@ try:
         with col1:
             st.subheader("📊 Maturidade por Nível")
             
-            # CORRIGIDO: Mostrar TODOS os status
+            # CORRIGIDO: Mostrar TODOS os status (Nível 2, 3, 4 apenas)
             niveis_data = []
             for nivel in ['Nível 2', 'Nível 3', 'Nível 4']:
                 adot, desenv, em_adoc, nao_init, perc = calcular_nivel_completo(df_inst, nivel)
@@ -600,7 +608,7 @@ try:
     st.markdown("---")
     st.markdown(f"""
     <div style='text-align: center; color: #666; padding: 1rem;'>
-        <p><strong>QA Accelerate - TAG IMF</strong></p>
+        <p><strong>Framework TMMi - TAG IMF</strong></p>
         <p>Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
         <p style='font-size: 0.9rem;'>De Subjetivo para Objetivo | De Percepção para Evidência</p>
     </div>
