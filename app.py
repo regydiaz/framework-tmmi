@@ -5,7 +5,7 @@ from datetime import datetime
 
 # Configuração da página
 st.set_page_config(
-    page_title="Framework TMMi - TAG IMF",
+    page_title="QA Accelerate - TAG IMF",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -124,7 +124,7 @@ st.markdown("""
 # Carregar dados
 @st.cache_data
 def load_data():
-    file_path = 'Framework_-_TMMi-TAG__1_.xlsx'
+    file_path = 'Framework_-_TMMi-TAG__1_.xlsx'  # Pode renomear planilha depois
     
     try:
         # Visão Institucional
@@ -264,7 +264,7 @@ try:
     metricas = calcular_metricas(df_inst)
     
     # Header
-    st.markdown('<div class="main-header">🎯 Framework TMMi - TAG IMF</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">🎯 QA Accelerate - TAG IMF</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle"><strong>De Subjetivo para Objetivo</strong> | <strong>De Percepção para Evidência</strong></div>', unsafe_allow_html=True)
     
     # Sidebar
@@ -276,7 +276,7 @@ try:
             "📋 Áreas por Nível",
             "👥 Visão por Squads",
             "🗓️ Roadmap 2026",
-            "💡 Por que TMMi?"
+            "💡 Por que QA Accelerate?"
         ]
     )
     
@@ -288,7 +288,7 @@ try:
         
         st.markdown(f"""
         <div class="hero-box">
-            <h1 style="margin: 0; font-size: 2.5rem;">🎉 TAG IMF: NÍVEL 2 DO TMMi ALCANÇADO!</h1>
+            <h1 style="margin: 0; font-size: 2.5rem;">🎉 TAG IMF: NÍVEL 2 DO TMMi ALCANÇADO! (QA Accelerate)</h1>
             <p style="font-size: 1.3rem; margin: 1rem 0;">
                 <strong>{nivel2_perc:.0f}%</strong> das áreas do Nível 2 (Gerenciado) adotadas<br/>
                 Caminhando para Nível 3: <strong>{nivel3_perc:.0f}%</strong> já iniciado
@@ -614,8 +614,8 @@ try:
             """, unsafe_allow_html=True)
     
     # ================== POR QUE TMMi? ==================
-    elif pagina == "💡 Por que TMMi?":
-        st.header("💡 Por que estruturar o Framework TMMi na TAG?")
+    elif pagina == "💡 Por que QA Accelerate?":
+        st.header("💡 Por que estruturar o QA Accelerate na TAG?")
         
         st.markdown("""
         <div class="hero-box">
@@ -672,7 +672,7 @@ try:
     st.markdown("---")
     st.markdown(f"""
     <div style='text-align: center; color: #666; padding: 1rem;'>
-        <p><strong>Framework TMMi - TAG IMF</strong></p>
+        <p><strong>QA Accelerate - TAG IMF</strong></p>
         <p>Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
         <p style='font-size: 0.9rem;'>De Subjetivo para Objetivo | De Percepção para Evidência</p>
     </div>
