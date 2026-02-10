@@ -5,7 +5,7 @@ from datetime import datetime
 
 # Configuração da página
 st.set_page_config(
-    page_title="Framework TMMi - TAG IMF",
+    page_title="QA Accelerate- TAG IMF",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -17,23 +17,25 @@ st.markdown("""
     .main-header {
         font-size: 2.5rem;
         font-weight: bold;
-        text-align: center;
+        text-align: left;
         padding: 1.5rem;
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(90deg, #6664F1 0%, #6293E8 100%);
         border-radius: 10px;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
+        margin-top: 1rem;
         color: white;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     .subtitle {
-        text-align: center;
+        text-align: left;
         color: #666;
         font-size: 1.2rem;
         margin-bottom: 2rem;
+        margin-left: 1.5rem;
         font-weight: 500;
     }
     .hero-box {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #6664F1 0%, #6293E8 100%);
         color: white;
         padding: 2rem;
         border-radius: 15px;
@@ -57,7 +59,7 @@ st.markdown("""
     .metric-value {
         font-size: 2.5rem;
         font-weight: bold;
-        color: #667eea;
+        color: #6664F1;
         margin-bottom: 0.5rem;
     }
     .metric-label {
@@ -104,13 +106,13 @@ st.markdown("""
     }
     .area-box {
         background-color: #f8f9fa;
-        border-left: 5px solid #667eea;
+        border-left: 5px solid #6664F1;
         padding: 1rem;
         margin: 0.5rem 0;
         border-radius: 5px;
     }
     .nivel-header {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(90deg, #6664F1 0%, #6293E8 100%);
         color: white;
         padding: 0.8rem 1.5rem;
         border-radius: 8px;
@@ -263,9 +265,18 @@ try:
     df_squads = data['squads']
     metricas = calcular_metricas(df_inst)
     
-    # Header
-    st.markdown('<div class="main-header">🎯 Framework TMMi - TAG IMF</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle"><strong>De Subjetivo para Objetivo</strong> | <strong>De Percepção para Evidência</strong></div>', unsafe_allow_html=True)
+    # Header com logo TAG IMF
+    col_logo, col_title = st.columns([1, 4])
+    
+    with col_logo:
+        try:
+            st.image('logo_tagimf.png', width=200)
+        except:
+            pass  # Se logo não existir, continua sem
+    
+    with col_title:
+        st.markdown('<div class="main-header">Framework TMMi - TAG IMF</div>', unsafe_allow_html=True)
+        st.markdown('<div class="subtitle"><strong>De Subjetivo para Objetivo</strong> | <strong>De Percepção para Evidência</strong></div>', unsafe_allow_html=True)
     
     # Sidebar
     st.sidebar.title("📊 Navegação")
@@ -670,13 +681,27 @@ try:
     
     # Footer
     st.markdown("---")
-    st.markdown(f"""
-    <div style='text-align: center; color: #666; padding: 1rem;'>
-        <p><strong>Framework TMMi - TAG IMF</strong></p>
-        <p>Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
-        <p style='font-size: 0.9rem;'>De Subjetivo para Objetivo | De Percepção para Evidência</p>
-    </div>
-    """, unsafe_allow_html=True)
+    
+    col_footer1, col_footer2, col_footer3 = st.columns([1, 2, 1])
+    
+    with col_footer1:
+        try:
+            st.image('logo_vericode.png', width=150)
+        except:
+            pass
+    
+    with col_footer2:
+        st.markdown(f"""
+        <div style='text-align: center; color: #666; padding: 1rem;'>
+            <p><strong>Framework TMMi - TAG IMF</strong></p>
+            <p>Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
+            <p style='font-size: 0.9rem;'>De Subjetivo para Objetivo | De Percepção para Evidência</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_footer3:
+        # Espaço vazio para centralizar
+        st.write("")
 
 except Exception as e:
     st.error(f"⚠️ Erro: {str(e)}")
