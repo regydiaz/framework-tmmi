@@ -139,7 +139,7 @@ def load_data():
         # Renomear colunas Unnamed
         rename_map = {}
         squad_names = ['ID', 'Trimestre', 'Fase', 'Nível e Área', 'Envolvidos', 'Status', 
-                       'Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Interop', 'Negotiation', 'Consent']
+                       'Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Verus']
         
         for i, col in enumerate(df_squads.columns):
             if i < len(squad_names):
@@ -198,7 +198,7 @@ def estilizar_squads_df(df):
     """Aplica cores nas células baseado no status"""
     
     # Colunas de squads (últimas 7)
-    squad_cols = ['Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Interop', 'Negotiation', 'Consent']
+    squad_cols = ['Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Verus']
     
     def color_status(val):
         val_str = str(val).strip().upper()
@@ -311,7 +311,7 @@ try:
             
             # CORRIGIDO: Mostrar TODOS os status
             niveis_data = []
-            for nivel in ['Nível 2', 'Nível 3', 'Nível 4', 'Nível 5']:
+            for nivel in ['Nível 2', 'Nível 3', 'Nível 4']:
                 adot, desenv, em_adoc, nao_init, perc = calcular_nivel_completo(df_inst, nivel)
                 niveis_data.append({
                     'Nível': nivel.replace('Nível ', 'N'),
@@ -439,7 +439,7 @@ try:
     elif pagina == "📋 Áreas por Nível":
         st.header("📋 Áreas de Processo por Nível TMMi")
         
-        for nivel in ['Nível 2', 'Nível 3', 'Nível 4', 'Nível 5']:
+        for nivel in ['Nível 2', 'Nível 3', 'Nível 4']:
             df_nivel = df_inst[df_inst['Nível TMMi'] == nivel]
             
             if len(df_nivel) > 0:
@@ -480,7 +480,7 @@ try:
         st.header("👥 Status das Melhorias por Squad")
         st.markdown("**Acompanhamento detalhado das iniciativas por equipe**")
         
-        squad_cols = ['Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Interop', 'Negotiation', 'Consent']
+        squad_cols = ['Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Verus']
         
         st.info(f"📊 **Squads mapeados:** {', '.join(squad_cols)}")
         
