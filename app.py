@@ -133,20 +133,46 @@ def load_data():
         df_inst['Nível TMMi'] = df_inst['Nível TMMi'].ffill()
         df_inst = df_inst[df_inst['Área de Processo'].notna()].drop('Col0', axis=1)
         
-        # Visão Squads
-        df_squads = pd.read_excel(file_path, sheet_name='TMMi - Visão Squads', skiprows=3)
+        # Visão Squads - ESTRUTURA CORRETA
+        # Linha 0: vazia
+        # Linha 1: título
+        # Linha 2: headers (ID MELHORIA, Trimestre, etc)
+        # Linha 3: headers squads (ATIVOS, DEMONSTRAÇÕES, etc)
+        # Linha 4+: dados
         
-        # Renomear colunas Unnamed
-        rename_map = {}
-        squad_names = ['ID', 'Trimestre', 'Fase', 'Nível e Área', 'Envolvidos', 'Status', 
-                       'Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Verus']
+        df_squads_raw = pd.read_excel(file_path, sheet_name='TMMi - Visão Squads', header=None, skiprows=2)
         
-        for i, col in enumerate(df_squads.columns):
-            if i < len(squad_names):
-                rename_map[col] = squad_names[i]
+        # Primeira linha tem: ID MELHORIA, Trimestre, Fase, Nível e Área, Envolvidos, SQUAD CARTÕES
+        # Segunda linha tem: (vazios), ATIVOS, DEMONSTRAÇÕES, OPERAÇÕES, PLATAFORMA, VERUS
         
-        df_squads = df_squads.rename(columns=rename_map)
+        # Pegar headers da linha 0 e 1
+        header_row1 = df_squads_raw.iloc[0].fillna('')
+        header_row2 = df_squads_raw.iloc[1].fillna('')
+        
+        # Combinar headers
+        headers = []
+        for i in range(len(header_row1)):
+            if header_row1[i] and header_row2[i]:
+                headers.append(str(header_row2[i]))  # Usa o nome da squad
+            elif header_row1[i]:
+                headers.append(str(header_row1[i]))
+            elif header_row2[i]:
+                headers.append(str(header_row2[i]))
+            else:
+                headers.append(f'Col_{i}')
+        
+        # Aplicar headers e pegar dados (a partir da linha 2)
+        df_squads = df_squads_raw.iloc[2:].copy()
+        df_squads.columns = headers
+        
+        # Remover primeira coluna (índice vazio do Excel)
+        df_squads = df_squads.iloc[:, 1:]
+        
+        # Limpar linhas vazias
         df_squads = df_squads.dropna(how='all')
+        
+        # Reset index
+        df_squads = df_squads.reset_index(drop=True)
         
         # Roadmap
         df_roadmap = pd.read_excel(file_path, sheet_name='ANUAL - Roadmap por Squads')
@@ -197,8 +223,11 @@ def calcular_nivel_completo(df, nivel):
 def estilizar_squads_df(df):
     """Aplica cores nas células baseado no status"""
     
-    # Colunas de squads (5 squads)
-    squad_cols = ['Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Verus']
+    # Colunas de squads (nomes EXATOS da planilha - em MAIÚSCULAS)
+    squad_cols = ['ATIVOS', 'DEMONSTRAÇÕES', 'OPERAÇÕES', 'PLATAFORMA', 'VERUS']
+    
+    # Filtrar apenas colunas que existem no dataframe
+    squad_cols_existentes = [col for col in squad_cols if col in df.columns]
     
     def color_status(val):
         val_str = str(val).strip().upper()
@@ -216,8 +245,11 @@ def estilizar_squads_df(df):
         else:
             return ''
     
-    # Aplicar estilo apenas nas colunas de squads
-    styled_df = df.style.applymap(color_status, subset=squad_cols)
+    # Aplicar estilo apenas nas colunas de squads que existem
+    if squad_cols_existentes:
+        styled_df = df.style.applymap(color_status, subset=squad_cols_existentes)
+    else:
+        styled_df = df.style
     
     return styled_df
 
@@ -405,34 +437,43 @@ try:
         st.markdown("---")
         st.subheader("📈 Destaques por Nível")
         
-        col1, col2 = st.columns(2)
+        # Legenda dos ícones
+        st.info("""
+        **Legenda dos status:**
+        - ✅ **Adotado** - Processo implementado e em uso
+        - 📊 **Em Adoção** - Em processo de implementação
+        - 🔄 **Desenvolvendo** - Em desenvolvimento inicial
+        - ⏸️ **Não Iniciado** - Ainda não começou
+        """)
+        
+        # Calcular níveis 2, 3, 4
+        nivel2_adotado, nivel2_desenv, nivel2_em_adocao, nivel2_nao_init, nivel2_perc = calcular_nivel_completo(df_inst, 'Nível 2')
+        nivel3_adotado, nivel3_desenv, nivel3_em_adocao, nivel3_nao_init, nivel3_perc = calcular_nivel_completo(df_inst, 'Nível 3')
+        nivel4_adotado, nivel4_desenv, nivel4_em_adocao, nivel4_nao_init, nivel4_perc = calcular_nivel_completo(df_inst, 'Nível 4')
+        
+        # 3 colunas para 3 níveis
+        col1, col2, col3 = st.columns(3)
         
         with col1:
             nivel2_total = nivel2_adotado + nivel2_desenv + nivel2_em_adocao + nivel2_nao_init
             st.markdown(f"""
             ### ✅ Nível 2 - Gerenciado
             **{nivel2_adotado}/{nivel2_total} áreas adotadas ({nivel2_perc:.0f}%)**
-            
-            **Áreas Adotadas:**
             """)
             
             nivel2_areas = df_inst[df_inst['Nível TMMi'] == 'Nível 2']
             for idx, row in nivel2_areas.iterrows():
-                if row['Status Institucional'] == 'Adotado':
-                    st.markdown(f"- ✅ {row['Área de Processo']}")
-            
-            st.markdown("**Falta apenas:**")
-            for idx, row in nivel2_areas.iterrows():
-                if row['Status Institucional'] != 'Adotado':
-                    st.markdown(f"- 🔄 {row['Área de Processo']} ({row['Status Institucional']})")
+                status = row['Status Institucional']
+                emoji = "✅" if status == "Adotado" else \
+                        "📊" if status == "Em Adoção" else \
+                        "🔄" if status == "Desenvolvendo" else "⏸️"
+                st.markdown(f"- {emoji} {row['Área de Processo']}")
         
         with col2:
             nivel3_total = nivel3_adotado + nivel3_desenv + nivel3_em_adocao + nivel3_nao_init
             st.markdown(f"""
             ### 🔄 Nível 3 - Definido
             **{nivel3_adotado}/{nivel3_total} áreas adotadas ({nivel3_perc:.0f}%)**
-            
-            **Em Progresso:**
             """)
             
             nivel3_areas = df_inst[df_inst['Nível TMMi'] == 'Nível 3']
@@ -441,7 +482,22 @@ try:
                 emoji = "✅" if status == "Adotado" else \
                         "📊" if status == "Em Adoção" else \
                         "🔄" if status == "Desenvolvendo" else "⏸️"
-                st.markdown(f"- {emoji} {row['Área de Processo']} ({status})")
+                st.markdown(f"- {emoji} {row['Área de Processo']}")
+        
+        with col3:
+            nivel4_total = nivel4_adotado + nivel4_desenv + nivel4_em_adocao + nivel4_nao_init
+            st.markdown(f"""
+            ### 🎯 Nível 4 - Medido
+            **{nivel4_adotado}/{nivel4_total} áreas adotadas ({nivel4_perc:.0f}%)**
+            """)
+            
+            nivel4_areas = df_inst[df_inst['Nível TMMi'] == 'Nível 4']
+            for idx, row in nivel4_areas.iterrows():
+                status = row['Status Institucional']
+                emoji = "✅" if status == "Adotado" else \
+                        "📊" if status == "Em Adoção" else \
+                        "🔄" if status == "Desenvolvendo" else "⏸️"
+                st.markdown(f"- {emoji} {row['Área de Processo']}")
     
     # ================== ÁREAS POR NÍVEL ==================
     elif pagina == "📋 Áreas por Nível":
@@ -488,9 +544,17 @@ try:
         st.header("👥 Status das Melhorias por Squad")
         st.markdown("**Acompanhamento detalhado das iniciativas por equipe**")
         
-        squad_cols = ['Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Verus']
+        # Nomes das squads (conforme aparecem na planilha)
+        squad_cols_display = ['Ativos', 'Demonstrações', 'Operações', 'Plataforma', 'Verus']
         
-        st.info(f"📊 **Squads mapeados:** {', '.join(squad_cols)}")
+        st.info(f"📊 **Squads mapeados:** {', '.join(squad_cols_display)}")
+        
+        # Aviso sobre trimestres futuros
+        st.warning("""
+        ⏰ **Atenção:** As melhorias do **Trimestre 2 (T2)** em diante ainda **NÃO FORAM INICIADAS**.
+        
+        Apenas as melhorias do **Trimestre 1 (T1)** estão em andamento ou concluídas.
+        """)
         
         # Aplicar cores
         styled_df = estilizar_squads_df(df_squads)
