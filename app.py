@@ -5,7 +5,7 @@ from datetime import datetime
 
 # Configuração da página
 st.set_page_config(
-    page_title="QA Accelerate- TAG IMF",
+    page_title="Framework TMMi - TAG IMF",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -17,21 +17,19 @@ st.markdown("""
     .main-header {
         font-size: 2.5rem;
         font-weight: bold;
-        text-align: left;
+        text-align: center;
         padding: 1.5rem;
         background: linear-gradient(90deg, #6664F1 0%, #6293E8 100%);
         border-radius: 10px;
-        margin-bottom: 0.5rem;
-        margin-top: 1rem;
+        margin-bottom: 1rem;
         color: white;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     .subtitle {
-        text-align: left;
+        text-align: center;
         color: #666;
         font-size: 1.2rem;
         margin-bottom: 2rem;
-        margin-left: 1.5rem;
         font-weight: 500;
     }
     .hero-box {
@@ -265,18 +263,9 @@ try:
     df_squads = data['squads']
     metricas = calcular_metricas(df_inst)
     
-    # Header com logo TAG IMF
-    col_logo, col_title = st.columns([1, 4])
-    
-    with col_logo:
-        try:
-            st.image('logo_tagimf.png', width=200)
-        except:
-            pass  # Se logo não existir, continua sem
-    
-    with col_title:
-        st.markdown('<div class="main-header">Framework TMMi - TAG IMF</div>', unsafe_allow_html=True)
-        st.markdown('<div class="subtitle"><strong>De Subjetivo para Objetivo</strong> | <strong>De Percepção para Evidência</strong></div>', unsafe_allow_html=True)
+    # Header
+    st.markdown('<div class="main-header">🎯 Framework TMMi - TAG IMF</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle"><strong>De Subjetivo para Objetivo</strong> | <strong>De Percepção para Evidência</strong></div>', unsafe_allow_html=True)
     
     # Sidebar
     st.sidebar.title("📊 Navegação")
@@ -681,27 +670,13 @@ try:
     
     # Footer
     st.markdown("---")
-    
-    col_footer1, col_footer2, col_footer3 = st.columns([1, 2, 1])
-    
-    with col_footer1:
-        try:
-            st.image('logo_vericode.png', width=150)
-        except:
-            pass
-    
-    with col_footer2:
-        st.markdown(f"""
-        <div style='text-align: center; color: #666; padding: 1rem;'>
-            <p><strong>Framework TMMi - TAG IMF</strong></p>
-            <p>Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
-            <p style='font-size: 0.9rem;'>De Subjetivo para Objetivo | De Percepção para Evidência</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col_footer3:
-        # Espaço vazio para centralizar
-        st.write("")
+    st.markdown(f"""
+    <div style='text-align: center; color: #666; padding: 1rem;'>
+        <p><strong>Framework TMMi - TAG IMF</strong></p>
+        <p>Atualizado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
+        <p style='font-size: 0.9rem;'>De Subjetivo para Objetivo | De Percepção para Evidência</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 except Exception as e:
     st.error(f"⚠️ Erro: {str(e)}")
